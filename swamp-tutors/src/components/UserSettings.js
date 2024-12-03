@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
+
 
 const UserSettings = () => {
     const [userData, setUserData] = useState({
@@ -96,9 +98,27 @@ const UserSettings = () => {
       console.error("Error deleting course:", error);
     }
   };
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">
+      <div className="flex justify-between w-full mb-6">
+  <button
+    onClick={() => navigate("/dashboard")}
+    className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600"
+  >
+    Back to Dashboard
+  </button>
+  <button
+    onClick={() => {
+      localStorage.removeItem("token");
+      navigate("/");
+    }}
+    className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600"
+  >
+    Logout
+  </button>
+</div>
       <h1 className="text-2xl font-bold mb-6">User Settings</h1>
 
       <div className="bg-white p-6 shadow-md rounded-md mb-6">
