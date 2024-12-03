@@ -4,6 +4,7 @@ import Home from "./components/Home";
 import Register from "./components/Register";
 import Login from "./components/Login";
 import Homepage from "./components/Homepage";
+import UserSettings from './components/UserSettings';
 
 function App() {
   const [user, setUser] = useState(null); // Manage logged-in user state
@@ -18,6 +19,7 @@ function App() {
           path="/dashboard"
           element={user ? <Homepage user={user} setUser={setUser} /> : <Home />}
         />
+        <Route path="/settings" element={<UserSettings user={user} setUser={setUser} />} />
       </Routes>
     </Router>
   );

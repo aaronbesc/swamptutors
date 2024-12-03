@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const Homepage = ({ user, setUser }) => {
   const [tutors, setTutors] = useState([]);
+  const navigate = useNavigate();
 
   // Fetch available tutors
   useEffect(() => {
@@ -31,12 +33,20 @@ const Homepage = ({ user, setUser }) => {
     <div className="min-h-screen bg-gray-100">
       <header className="bg-blue-500 text-white p-4 flex justify-between">
         <h1>Welcome, {user.name}</h1>
-        <button
-          onClick={handleLogout}
-          className="bg-red-500 px-4 py-2 rounded-md hover:bg-red-600"
-        >
-          Logout
-        </button>
+        <div>
+          <button
+            onClick={() => navigate("/settings")}
+            className="bg-green-500 px-4 py-2 rounded-md hover:bg-green-600 mr-4"
+          >
+            Settings
+          </button>
+          <button
+            onClick={handleLogout}
+            className="bg-red-500 px-4 py-2 rounded-md hover:bg-red-600"
+          >
+            Logout
+          </button>
+        </div>
       </header>
       <main className="p-8">
         <h2 className="text-xl font-bold mb-4">Available Tutors</h2>
@@ -47,14 +57,18 @@ const Homepage = ({ user, setUser }) => {
                 <h3 className="font-bold">{tutor.name}</h3>
                 <p>Email: {tutor.email}</p>
                 <p>
-                  Subjects:{" "}
+                  Courses Tutoring:{" "}
                   {tutor.courses && tutor.courses.length > 0
                     ? tutor.courses.join(", ")
-                    : "No subjects available"}
+                    : "No courses listed"}
                 </p>
                 <p>
                   Availability:{" "}
-                  {tutor.is_available ? "Available" : "Not Available"}
+                  <span
+                    className={`inline-block w-3 h-3 rounded-full ${
+                      tutor.is_available ? "bg-green-500" : "bg-red-500"
+                    }`}
+                  ></span>
                 </p>
               </li>
             ))}
@@ -68,4 +82,3 @@ const Homepage = ({ user, setUser }) => {
 };
 
 export default Homepage;
-

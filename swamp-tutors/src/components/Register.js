@@ -36,9 +36,9 @@ const Register = ({ setUser }) => {
         name: formData.name,
         email: formData.email,
         password: formData.password,
-        courses: formData.courses.split(","),
+        courses: formData.courses.split(",").map((course) => course.trim()), // Split and trim "taken" courses
+        tutorCourses: formData.tutorCourses.split(",").map((course) => course.trim()), // Split and trim "tutoring" courses
         is_tutor: formData.isTutor,
-        tutorCourses: formData.tutorCourses.split(","),
       });
   
       if (response.data.success) {
@@ -60,6 +60,7 @@ const Register = ({ setUser }) => {
       setMessage(error.response?.data?.error || "Registration failed.");
     }
   };
+  
   
 
   return (

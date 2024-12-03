@@ -45,7 +45,7 @@ app.get('/test-db', (req, res) => {
 });
 
 app.post('/register', async (req, res) => {
-  const { name, email, password, is_tutor, courses } = req.body;
+  const { name, email, password, is_tutor, courses, tutorCourses } = req.body;
 
   try {
     // Check if email already exists
@@ -65,11 +65,19 @@ app.post('/register', async (req, res) => {
 
           const userId = this.lastID;
 
-          // Insert courses for the user
+          // Insert "taken" courses
           courses.forEach((course) => {
             db.run(
               'INSERT INTO courses (user_id, course_name, type) VALUES (?, ?, ?)',
-              [userId, course, is_tutor ? 'tutoring' : 'taken']
+              [userId, course, 'taken']
+            );
+          });
+
+          // Insert "tutoring" courses
+          tutorCourses.forEach((course) => {
+            db.run(
+              'INSERT INTO courses (user_id, course_name, type) VALUES (?, ?, ?)',
+              [userId, course, 'tutoring']
             );
           });
 
@@ -95,14 +103,15 @@ app.post('/register', async (req, res) => {
   }
 });
 
-
 app.get('/tutors', authenticate, (req, res) => {
   const { email } = req.user; // Email of the logged-in user from JWT
 
   db.all(
-    `SELECT u.id, u.name, u.email, u.is_available, GROUP_CONCAT(c.course_name) AS courses 
+    `SELECT u.id, u.name, u.email, u.is_available, 
+            GROUP_CONCAT(c.course_name) AS courses
      FROM users u 
-     LEFT JOIN courses c ON u.id = c.user_id 
+     LEFT JOIN courses c 
+       ON u.id = c.user_id AND c.type = 'tutoring' -- Only include tutoring courses
      WHERE u.is_tutor = 1 AND u.email != ? 
      GROUP BY u.id`,
     [email],
@@ -123,10 +132,6 @@ app.get('/tutors', authenticate, (req, res) => {
     }
   );
 });
-
-
-
-
 
 
 app.get('/users', (req, res) => {
@@ -170,4 +175,86 @@ app.post('/login', (req, res) => {
     res.json({ token, name: user.name, is_tutor: user.is_tutor });
   });
 });
+
+// Endpoint to fetch user details
+app.get('/user/settings', authenticate, (req, res) => {
+  const { id } = req.user; // Extract user ID from the JWT
+
+  db.get(
+    `SELECT id, name, email FROM users WHERE id = ?`,
+    [id],
+    (err, user) => {
+      if (err) {
+        return res.status(500).json({ error: 'Failed to fetch user details: ' + err.message });
+      }
+      if (!user) {
+        return res.status(404).json({ error: 'User not found.' });
+      }
+
+      db.all(
+        `SELECT course_name FROM courses WHERE user_id = ? AND type = 'taken'`,
+        [id],
+        (err, courses) => {
+          if (err) {
+            return res.status(500).json({ error: 'Failed to fetch courses: ' + err.message });
+          }
+          const courseNames = courses.map((course) => course.course_name);
+          res.json({ ...user, courses: courseNames });
+        }
+      );
+    }
+  );
+});
+
+// Endpoint to update name and email
+app.put('/user/settings', authenticate, (req, res) => {
+  const { id } = req.user; // Extract user ID from JWT
+  const { name, email } = req.body;
+
+  db.run(
+    `UPDATE users SET name = ?, email = ? WHERE id = ?`,
+    [name, email, id],
+    function (err) {
+      if (err) {
+        return res.status(500).json({ error: 'Failed to update user details: ' + err.message });
+      }
+      res.json({ success: true, message: 'User details updated successfully.' });
+    }
+  );
+});
+
+// Endpoint to manage "courses taken"
+app.put('/user/settings/courses', authenticate, (req, res) => {
+  const { id } = req.user; // Extract user ID from JWT
+  const { action, courseName } = req.body;
+
+  if (action === 'add') {
+    db.run(
+      `INSERT INTO courses (user_id, course_name, type) VALUES (?, ?, 'taken')`,
+      [id, courseName],
+      function (err) {
+        if (err) {
+          return res.status(500).json({ error: 'Failed to add course: ' + err.message });
+        }
+        res.json({ success: true, message: 'Course added successfully.' });
+      }
+    );
+  } else if (action === 'delete') {
+    db.run(
+      `DELETE FROM courses WHERE user_id = ? AND course_name = ? AND type = 'taken'`,
+      [id, courseName],
+      function (err) {
+        if (err) {
+          return res.status(500).json({ error: 'Failed to delete course: ' + err.message });
+        }
+        res.json({ success: true, message: 'Course deleted successfully.' });
+      }
+    );
+  } else {
+    res.status(400).json({ error: 'Invalid action.' });
+  }
+});
+
+
+
 
