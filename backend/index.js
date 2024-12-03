@@ -322,6 +322,42 @@ app.put('/user/settings/tutor/courses', authenticate, (req, res) => {
   }
 });
 
+app.put('/user/settings/password', authenticate, (req, res) => {
+  const { id } = req.user; // Extract user ID from the JWT
+  const { currentPassword, newPassword } = req.body;
+
+  // Fetch the current password hash from the database
+  db.get(`SELECT password FROM users WHERE id = ?`, [id], async (err, user) => {
+    if (err) {
+      return res.status(500).json({ error: 'Failed to fetch user data: ' + err.message });
+    }
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    // Compare the current password with the stored hash
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ error: 'Current password is incorrect.' });
+    }
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update the password in the database
+    db.run(
+      `UPDATE users SET password = ? WHERE id = ?`,
+      [hashedPassword, id],
+      function (err) {
+        if (err) {
+          return res.status(500).json({ error: 'Failed to update password: ' + err.message });
+        }
+        res.json({ success: true, message: 'Password updated successfully.' });
+      }
+    );
+  });
+});
+
 
 
 

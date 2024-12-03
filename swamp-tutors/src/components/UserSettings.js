@@ -9,7 +9,12 @@ const UserSettings = () => {
         isTutor: false,
         isAvailable: false,
         tutoringCourses: [],
-      });      
+      });
+      const [passwordData, setPasswordData] = useState({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });            
   const [newCourse, setNewCourse] = useState("");
   const [newTutoringCourse, setNewTutoringCourse] = useState("");
   const [message, setMessage] = useState("");
@@ -295,6 +300,83 @@ const UserSettings = () => {
 </div>
 
 
+<div className="bg-white p-6 shadow-md rounded-md mb-6">
+  <h2 className="text-xl font-semibold mb-4">Update Password</h2>
+
+  <label className="block mb-4">
+    Current Password:
+    <input
+      type="password"
+      value={passwordData.currentPassword}
+      onChange={(e) =>
+        setPasswordData({ ...passwordData, currentPassword: e.target.value })
+      }
+      className="block w-full p-2 border border-gray-300 rounded-md"
+    />
+  </label>
+
+  <label className="block mb-4">
+    New Password:
+    <input
+      type="password"
+      value={passwordData.newPassword}
+      onChange={(e) =>
+        setPasswordData({ ...passwordData, newPassword: e.target.value })
+      }
+      className="block w-full p-2 border border-gray-300 rounded-md"
+    />
+  </label>
+
+  <label className="block mb-4">
+    Confirm New Password:
+    <input
+      type="password"
+      value={passwordData.confirmPassword}
+      onChange={(e) =>
+        setPasswordData({ ...passwordData, confirmPassword: e.target.value })
+      }
+      className="block w-full p-2 border border-gray-300 rounded-md"
+    />
+  </label>
+
+  <button
+    onClick={async () => {
+      if (passwordData.newPassword !== passwordData.confirmPassword) {
+        setMessage("New password and confirmation do not match.");
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.put(
+          "http://localhost:5000/user/settings/password",
+          {
+            currentPassword: passwordData.currentPassword,
+            newPassword: passwordData.newPassword,
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        if (response.data.success) {
+          setMessage("Password updated successfully!");
+          setPasswordData({
+            currentPassword: "",
+            newPassword: "",
+            confirmPassword: "",
+          });
+        }
+      } catch (error) {
+        setMessage(
+          error.response?.data?.error || "Failed to update password."
+        );
+        console.error("Error updating password:", error);
+      }
+    }}
+    className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
+  >
+    Update Password
+  </button>
+</div>
 
 
 
