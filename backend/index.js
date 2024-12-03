@@ -181,7 +181,8 @@ app.get('/user/settings', authenticate, (req, res) => {
   const { id } = req.user; // Extract user ID from the JWT
 
   db.get(
-    `SELECT id, name, email FROM users WHERE id = ?`,
+    `SELECT id, name, email, is_tutor AS isTutor, is_available AS isAvailable 
+     FROM users WHERE id = ?`,
     [id],
     (err, user) => {
       if (err) {
@@ -191,20 +192,37 @@ app.get('/user/settings', authenticate, (req, res) => {
         return res.status(404).json({ error: 'User not found.' });
       }
 
+      // Fetch "courses taken"
       db.all(
         `SELECT course_name FROM courses WHERE user_id = ? AND type = 'taken'`,
         [id],
-        (err, courses) => {
+        (err, takenCourses) => {
           if (err) {
-            return res.status(500).json({ error: 'Failed to fetch courses: ' + err.message });
+            return res.status(500).json({ error: 'Failed to fetch taken courses: ' + err.message });
           }
-          const courseNames = courses.map((course) => course.course_name);
-          res.json({ ...user, courses: courseNames });
+
+          // Fetch "courses tutoring"
+          db.all(
+            `SELECT course_name FROM courses WHERE user_id = ? AND type = 'tutoring'`,
+            [id],
+            (err, tutoringCourses) => {
+              if (err) {
+                return res.status(500).json({ error: 'Failed to fetch tutoring courses: ' + err.message });
+              }
+
+              res.json({
+                ...user,
+                courses: takenCourses.map((course) => course.course_name),
+                tutoringCourses: tutoringCourses.map((course) => course.course_name),
+              });
+            }
+          );
         }
       );
     }
   );
 });
+
 
 // Endpoint to update name and email
 app.put('/user/settings', authenticate, (req, res) => {
@@ -248,6 +266,55 @@ app.put('/user/settings/courses', authenticate, (req, res) => {
           return res.status(500).json({ error: 'Failed to delete course: ' + err.message });
         }
         res.json({ success: true, message: 'Course deleted successfully.' });
+      }
+    );
+  } else {
+    res.status(400).json({ error: 'Invalid action.' });
+  }
+});
+
+// Endpoint to update tutor status and availability
+app.put('/user/settings/tutor', authenticate, (req, res) => {
+  const { id } = req.user;
+  const { isTutor, isAvailable } = req.body;
+
+  db.run(
+    `UPDATE users SET is_tutor = ?, is_available = ? WHERE id = ?`,
+    [isTutor ? 1 : 0, isAvailable ? 1 : 0, id],
+    function (err) {
+      if (err) {
+        return res.status(500).json({ error: 'Failed to update tutor status: ' + err.message });
+      }
+      res.json({ success: true, message: 'Tutor status updated successfully.' });
+    }
+  );
+});
+
+// Endpoint to manage "courses tutoring"
+app.put('/user/settings/tutor/courses', authenticate, (req, res) => {
+  const { id } = req.user;
+  const { action, courseName } = req.body;
+
+  if (action === 'add') {
+    db.run(
+      `INSERT INTO courses (user_id, course_name, type) VALUES (?, ?, 'tutoring')`,
+      [id, courseName],
+      function (err) {
+        if (err) {
+          return res.status(500).json({ error: 'Failed to add tutoring course: ' + err.message });
+        }
+        res.json({ success: true, message: 'Tutoring course added successfully.' });
+      }
+    );
+  } else if (action === 'delete') {
+    db.run(
+      `DELETE FROM courses WHERE user_id = ? AND course_name = ? AND type = 'tutoring'`,
+      [id, courseName],
+      function (err) {
+        if (err) {
+          return res.status(500).json({ error: 'Failed to delete tutoring course: ' + err.message });
+        }
+        res.json({ success: true, message: 'Tutoring course deleted successfully.' });
       }
     );
   } else {
