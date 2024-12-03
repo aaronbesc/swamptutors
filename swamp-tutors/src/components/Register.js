@@ -1,60 +1,74 @@
-import React, { useState } from 'react';
-import axios from 'axios';
+import React, { useState } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
-const Register = () => {
-  // State variables for form inputs
+const Register = ({ setUser }) => {
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    courses: '',
+    name: "",
+    email: "",
+    password: "",
+    courses: "",
     isTutor: false,
-    tutorCourses: '',
+    tutorCourses: "",
   });
 
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState("");
+  const navigate = useNavigate();
 
-  // Handle form changes
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData({
       ...formData,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: type === "checkbox" ? checked : value,
     });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
   
-    if (!formData.email.endsWith('@ufl.edu')) {
-      setMessage('Please use a @ufl.edu email address.');
+    if (!formData.email.endsWith("@ufl.edu")) {
+      setMessage("Please use a @ufl.edu email address.");
       return;
     }
   
     try {
-      const response = await axios.post('http://localhost:5000/register', {
+      const response = await axios.post("http://localhost:5000/register", {
         name: formData.name,
         email: formData.email,
         password: formData.password,
-        courses: formData.courses.split(','),
+        courses: formData.courses.split(","),
         is_tutor: formData.isTutor,
-        tutorCourses: formData.tutorCourses.split(','),
+        tutorCourses: formData.tutorCourses.split(","),
       });
   
       if (response.data.success) {
-        setMessage('Registration successful!');
+        // Save the token to local storage
+        localStorage.setItem("token", response.data.token);
+  
+        // Set user state
+        setUser({
+          name: response.data.name,
+          isTutor: response.data.is_tutor,
+        });
+  
+        // Redirect to the dashboard
+        navigate("/dashboard");
       } else {
-        setMessage('Registration failed.');
+        setMessage("Registration failed.");
       }
     } catch (error) {
-      setMessage('Error: ' + (error.response?.data?.error || error.message));
+      setMessage(error.response?.data?.error || "Registration failed.");
     }
-  };  
+  };
+  
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
       <h1 className="text-2xl font-bold mb-6">Register</h1>
-      <form className="bg-white p-8 shadow-md rounded-md w-96" onSubmit={handleSubmit}>
+      <form
+        className="bg-white p-8 shadow-md rounded-md w-96"
+        onSubmit={handleSubmit}
+      >
         <div className="mb-4">
           <label htmlFor="name" className="block text-gray-700">
             Full Name
@@ -159,3 +173,4 @@ const Register = () => {
 };
 
 export default Register;
+

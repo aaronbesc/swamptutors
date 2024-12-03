@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Register from './components/Register';
-import Login from './components/Login';
-import Homepage from './components/Homepage';
+import React, { useState } from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Home from "./components/Home";
+import Register from "./components/Register";
+import Login from "./components/Login";
+import Homepage from "./components/Homepage";
 
 function App() {
   const [user, setUser] = useState(null); // Manage logged-in user state
@@ -10,22 +11,12 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Registration Route */}
+        <Route path="/" element={<Home />} />
+        <Route path="/register" element={<Register setUser={setUser} />} />
+        <Route path="/login" element={<Login setUser={setUser} />} />
         <Route
-          path="/register"
-          element={!user ? <Register /> : <Navigate to="/" />}
-        />
-
-        {/* Login Route */}
-        <Route
-          path="/login"
-          element={!user ? <Login setUser={setUser} /> : <Navigate to="/" />}
-        />
-
-        {/* Homepage Route */}
-        <Route
-          path="/"
-          element={user ? <Homepage user={user} setUser={setUser} /> : <Navigate to="/login" />}
+          path="/dashboard"
+          element={user ? <Homepage user={user} setUser={setUser} /> : <Home />}
         />
       </Routes>
     </Router>
@@ -33,5 +24,7 @@ function App() {
 }
 
 export default App;
+
+
 
 
