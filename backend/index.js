@@ -45,10 +45,9 @@ app.get('/test-db', (req, res) => {
 });
 
 app.post('/register', async (req, res) => {
-  const { name, email, password, is_tutor, courses, tutorCourses } = req.body;
+  const { name, email, password, isTutor, coursesTaken, coursesTutoring } = req.body;
 
   try {
-    // Check if email already exists
     db.get('SELECT * FROM users WHERE email = ?', [email], async (err, row) => {
       if (row) {
         return res.status(400).json({ error: 'Email is already registered.' });
@@ -57,7 +56,7 @@ app.post('/register', async (req, res) => {
       const hashedPassword = await bcrypt.hash(password, 10);
       db.run(
         'INSERT INTO users (name, email, password, is_tutor) VALUES (?, ?, ?, ?)',
-        [name, email, hashedPassword, is_tutor],
+        [name, email, hashedPassword, isTutor],
         function (err) {
           if (err) {
             return res.status(500).json({ error: 'User creation failed: ' + err.message });
@@ -65,36 +64,22 @@ app.post('/register', async (req, res) => {
 
           const userId = this.lastID;
 
-          // Insert "taken" courses
-          courses.forEach((course) => {
-            db.run(
-              'INSERT INTO courses (user_id, course_name, type) VALUES (?, ?, ?)',
-              [userId, course, 'taken']
-            );
+          // Insert "courses taken"
+          coursesTaken.forEach((course) => {
+            db.run('INSERT INTO courses (user_id, course_name, type) VALUES (?, ?, ?)', [userId, course, 'taken']);
           });
 
-          // Insert "tutoring" courses
-          tutorCourses.forEach((course) => {
-            db.run(
-              'INSERT INTO courses (user_id, course_name, type) VALUES (?, ?, ?)',
-              [userId, course, 'tutoring']
-            );
-          });
+          // Insert "courses tutoring"
+          if (isTutor) {
+            coursesTutoring.forEach((course) => {
+              db.run('INSERT INTO courses (user_id, course_name, type) VALUES (?, ?, ?)', [userId, course, 'tutoring']);
+            });
+          }
 
           // Generate JWT token
-          const token = jwt.sign(
-            { id: userId, email },
-            process.env.JWT_SECRET,
-            { expiresIn: '1h' }
-          );
+          const token = jwt.sign({ id: userId, email }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-          res.status(201).json({
-            success: true,
-            message: 'User created successfully.',
-            token,
-            name,
-            is_tutor,
-          });
+          res.status(201).json({ success: true, message: 'User created successfully.', token });
         }
       );
     });
@@ -102,6 +87,7 @@ app.post('/register', async (req, res) => {
     res.status(500).json({ error: 'Internal server error: ' + err.message });
   }
 });
+
 
 app.get('/tutors', authenticate, (req, res) => {
   const { email } = req.user; // Email of the logged-in user from JWT
